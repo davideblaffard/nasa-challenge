@@ -40,6 +40,12 @@ echo ""
 
 cd backend
 
+echo "→ Checking Railway project link..."
+if ! railway status &>/dev/null 2>&1; then
+  echo "  No linked project. Launching 'railway link'..."
+  railway link
+fi
+
 echo "→ Deploying backend..."
 railway up --detach
 
