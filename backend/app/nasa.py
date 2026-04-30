@@ -10,11 +10,24 @@ NASA_BASE_URL = "https://api.nasa.gov/neo/rest/v1"
 NASA_MAX_RANGE = 7
 
 
+class NASAAPIError(Exception):
+    def __init__(self, status_code: int, message: str):
+        self.status_code = status_code
+        super().__init__(message)
+
+
 class NeoWSClient:
     def __init__(self):
         self.api_key = config("NASA_API_KEY")
         self.session = requests.Session()
         self.session.params = {"api_key": self.api_key}  # type: ignore[assignment]
+
+    def _check(self, r: requests.Response) -> None:
+        if r.status_code == 429:
+            raise NASAAPIError(429, "NASA API rate limit raggiunto (500 req/h). Riprova tra qualche minuto.")
+        if r.status_code >= 500:
+            raise NASAAPIError(r.status_code, f"NASA API non disponibile (HTTP {r.status_code}).")
+        r.raise_for_status()
 
     def fetch_feed(self, start_date: date, end_date: date) -> dict:
         r = self.session.get(
@@ -25,13 +38,24 @@ class NeoWSClient:
             },
             timeout=15,
         )
-        r.raise_for_status()
+        self._check(r)
         return r.json()
 
     def fetch_neo(self, nasa_id: str) -> dict:
         r = self.session.get(f"{NASA_BASE_URL}/neo/{nasa_id}", timeout=15)
-        r.raise_for_status()
+        self._check(r)
         return r.json()
+
+
+# Module-level singleton — one Session pool for all requests
+_client: NeoWSClient | None = None
+
+
+def get_nasa_client() -> NeoWSClient:
+    global _client
+    if _client is None:
+        _client = NeoWSClient()
+    return _client
 
 
 def split_range(start: date, end: date) -> list[tuple[date, date]]:

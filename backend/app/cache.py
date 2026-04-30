@@ -1,15 +1,16 @@
 import logging
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
-import requests
 from sqlalchemy import func
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
 from .models import Asteroid, NeoDetailCache
-from .nasa import NeoWSClient, parse_neo, split_range
+from .nasa import NASAAPIError, get_nasa_client, parse_neo, split_range
 
 logger = logging.getLogger(__name__)
+
+NEO_CACHE_TTL_DAYS = 7
 
 
 def get_feed(start_date: date, end_date: date, db: Session) -> list[Asteroid]:
@@ -28,14 +29,16 @@ def get_feed(start_date: date, end_date: date, db: Session) -> list[Asteroid]:
     missing = all_dates - existing_dates
 
     if missing:
-        client = NeoWSClient()
+        client = get_nasa_client()
         missing_min, missing_max = min(missing), max(missing)
 
         for chunk_start, chunk_end in split_range(missing_min, missing_max):
             try:
                 data = client.fetch_feed(chunk_start, chunk_end)
-            except requests.RequestException as e:
-                logger.error("NASA API error: %s", e)
+            except NASAAPIError:
+                raise  # propagate 429 / 5xx to the endpoint
+            except Exception as e:
+                logger.error("NASA fetch error for %s–%s: %s", chunk_start, chunk_end, e)
                 continue
 
             rows = []
@@ -71,15 +74,25 @@ def get_feed(start_date: date, end_date: date, db: Session) -> list[Asteroid]:
 
 def get_neo_detail(nasa_id: str, db: Session) -> dict | None:
     cached = db.get(NeoDetailCache, nasa_id)
-    if cached:
-        return {"nasa_id": nasa_id, "data": cached.data}
+    if cached and cached.fetched_at:
+        fetched_at = cached.fetched_at.replace(tzinfo=timezone.utc)
+        age = datetime.now(timezone.utc) - fetched_at
+        if age < timedelta(days=NEO_CACHE_TTL_DAYS):
+            return {"nasa_id": nasa_id, "data": cached.data}
 
     try:
-        client = NeoWSClient()
+        client = get_nasa_client()
         data = client.fetch_neo(nasa_id)
-        db.merge(NeoDetailCache(nasa_id=nasa_id, data=data))
+        stmt = pg_insert(NeoDetailCache).values(nasa_id=nasa_id, data=data)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["nasa_id"],
+            set_={"data": stmt.excluded.data, "fetched_at": func.now()},
+        )
+        db.execute(stmt)
         db.commit()
         return {"nasa_id": nasa_id, "data": data}
-    except requests.RequestException as e:
+    except NASAAPIError:
+        raise
+    except Exception as e:
         logger.error("NASA API error for NEO %s: %s", nasa_id, e)
         return None

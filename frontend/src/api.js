@@ -5,6 +5,7 @@ async function apiFetch(path) {
   if (!res.ok) {
     if (res.status === 429) throw new Error('NASA API rate limit raggiunto (500 req/h). Riprova tra qualche minuto.')
     if (res.status === 503) throw new Error('NASA API non disponibile. Riprova più tardi.')
+    if (res.status === 500) throw new Error('Errore interno del server. Controlla i log Railway.')
     const err = await res.json().catch(() => ({}))
     throw new Error(err.detail || `Errore server (${res.status})`)
   }

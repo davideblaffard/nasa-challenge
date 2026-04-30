@@ -55,10 +55,12 @@ export default function Dashboard() {
   const [pendingEnd, setPendingEnd] = useState(isoToday())
   const [filter, setFilter] = useState('all')
   const [sortBy, setSortBy] = useState('date')
+  const [dateError, setDateError] = useState(null)
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['feed', startDate, endDate],
     queryFn: () => fetchFeed(startDate, endDate),
+    enabled: !!startDate && !!endDate,
   })
 
   const filtered = useMemo(() => {
@@ -70,8 +72,6 @@ export default function Dashboard() {
     if (sortBy === 'diameter') arr.sort((a, b) => b.diameter_avg_m - a.diameter_avg_m)
     return arr
   }, [data, filter, sortBy])
-
-  const [dateError, setDateError] = useState(null)
 
   function handleSearch(e) {
     e.preventDefault()

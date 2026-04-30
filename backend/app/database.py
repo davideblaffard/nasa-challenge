@@ -1,10 +1,17 @@
+import logging
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
 from decouple import config
 
-DATABASE_URL = config("DATABASE_URL")
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+logger = logging.getLogger(__name__)
+
+try:
+    DATABASE_URL = config("DATABASE_URL")
+    engine = create_engine(DATABASE_URL)
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+except Exception as e:
+    logger.critical("Failed to configure database: %s", e)
+    raise
 
 
 class Base(DeclarativeBase):
