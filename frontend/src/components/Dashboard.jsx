@@ -71,8 +71,22 @@ export default function Dashboard() {
     return arr
   }, [data, filter, sortBy])
 
+  const [dateError, setDateError] = useState(null)
+
   function handleSearch(e) {
     e.preventDefault()
+    const s = new Date(pendingStart)
+    const en = new Date(pendingEnd)
+    if (s > en) {
+      setDateError('DATA INIZIO deve precedere DATA FINE.')
+      return
+    }
+    const days = (en - s) / (1000 * 60 * 60 * 24)
+    if (days > 365) {
+      setDateError('Range massimo consentito: 365 giorni.')
+      return
+    }
+    setDateError(null)
     setStartDate(pendingStart)
     setEndDate(pendingEnd)
   }
@@ -133,6 +147,7 @@ export default function Dashboard() {
         </div>
       </form>
 
+      {dateError && <ErrorBanner message={dateError} />}
       {isError && <ErrorBanner message={error.message} />}
 
       {!isError && (

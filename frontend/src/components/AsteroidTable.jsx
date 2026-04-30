@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import Tooltip from './Tooltip'
 
 const COLS = [
-  { label: 'NAME',        align: 'text-left',   tip: 'Designazione NASA. Click per scheda completa.' },
-  { label: 'DATE',        align: 'text-left',   tip: 'Data close approach nel range selezionato.' },
-  { label: 'DIAM (m)',    align: 'text-right',  tip: 'Diametro medio stimato in metri.' },
-  { label: 'SPEED (km/h)', align: 'text-right', tip: 'Velocità relativa al close approach.' },
-  { label: 'DIST (km)',   align: 'text-right',  tip: 'Miss distance — distanza minima dalla Terra.' },
-  { label: 'STATUS',      align: 'text-center', tip: 'PHO = Potentially Hazardous Object (NASA): diametro >140m, dist <0.05 AU.' },
+  { label: 'NAME',           align: 'text-left',   tip: 'Designazione NASA. Click per scheda completa.' },
+  { label: 'DATE',           align: 'text-left',   tip: 'Data close approach nel range selezionato.' },
+  { label: 'DIAM MIN (m)',   align: 'text-right',  tip: 'Diametro minimo stimato in metri (NASA).' },
+  { label: 'DIAM MAX (m)',   align: 'text-right',  tip: 'Diametro massimo stimato in metri (NASA).' },
+  { label: 'SPEED (km/h)',   align: 'text-right',  tip: 'Velocità relativa al close approach.' },
+  { label: 'DIST (km)',      align: 'text-right',  tip: 'Miss distance — distanza minima dalla Terra.' },
+  { label: 'STATUS',         align: 'text-center', tip: 'PHO = Potentially Hazardous Object (NASA): diametro >140m, dist <0.05 AU.' },
 ]
 
 function SkeletonRow() {
@@ -70,7 +71,10 @@ export default function AsteroidTable({ asteroids, isLoading }) {
                     </td>
                     <td className="px-4 py-3 text-cyan">{a.close_approach_date}</td>
                     <td className="px-4 py-3 text-right text-pulse">
-                      {Math.round(a.diameter_avg_m).toLocaleString('it-IT')}
+                      {Math.round(a.diameter_min_km * 1000).toLocaleString('it-IT')}
+                    </td>
+                    <td className="px-4 py-3 text-right text-pulse">
+                      {Math.round(a.diameter_max_km * 1000).toLocaleString('it-IT')}
                     </td>
                     <td className="px-4 py-3 text-right text-amber">
                       {Math.round(a.velocity_kmh).toLocaleString('it-IT')}
