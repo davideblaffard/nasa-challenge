@@ -45,11 +45,7 @@ fi
 echo "→ Linking Railway service (required before setting variables)..."
 railway service
 
-echo "→ Deploying backend..."
-railway up --detach
-
 echo "→ Setting NASA_API_KEY in Railway (input hidden, not logged)..."
-railway service
 if railway variables 2>/dev/null | grep -q "NASA_API_KEY"; then
   echo "  NASA_API_KEY already set. Skip? [y/N]"
   read -r SKIP_KEY
@@ -67,6 +63,9 @@ else
   railway variables --set "NASA_API_KEY=$NASA_KEY"
   unset NASA_KEY
 fi
+
+echo "→ Deploying backend..."
+railway up --detach
 
 echo "→ Getting backend URL..."
 BACKEND_URL=$(railway domain 2>/dev/null | grep -oE 'https://[^ ]+' | head -1 || true)
