@@ -1,0 +1,10 @@
+# Core
+Django==5.2.1
+psycopg2-binary==2.9.10
+gunicorn==23.0.0
+
+# HTTP
+requests==2.32.3
+
+# Utils
+python-decouple==3.8

@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — NASA NEO Monitor{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="mb-10">
+  <h1 class="font-display text-6xl sm:text-8xl text-white tracking-widest leading-none">
+    NEAR EARTH<br><span class="text-pulse">OBJECTS</span>
+  </h1>
+  <p class="text-dim text-sm mt-3 tracking-widest">MONITORAGGIO ASTEROIDI IN TEMPO REALE</p>
+</div>
+
+<!-- Date filter -->
+<form method="get" class="mb-10">
+  <div class="flex flex-wrap gap-4 items-end">
+    <div>
+      <label class="block text-xs text-dim tracking-widest mb-2">DATA INIZIO</label>
+      <input type="date" name="start_date" value="{{ start_date }}"
+        class="bg-nebula border border-white/10 text-white text-sm font-mono px-4 py-2 rounded
+               focus:outline-none focus:border-pulse/60 focus:ring-1 focus:ring-pulse/30 transition-all">
+    </div>
+    <div>
+      <label class="block text-xs text-dim tracking-widest mb-2">DATA FINE</label>
+      <input type="date" name="end_date" value="{{ end_date }}"
+        class="bg-nebula border border-white/10 text-white text-sm font-mono px-4 py-2 rounded
+               focus:outline-none focus:border-pulse/60 focus:ring-1 focus:ring-pulse/30 transition-all">
+    </div>
+    <button type="submit"
+      class="bg-pulse text-void font-mono text-sm font-bold px-6 py-2 rounded tracking-widest
+             hover:bg-pulse/80 transition-all glow-pulse">
+      CERCA
+    </button>
+  </div>
+</form>
+
+{% if error %}
+<div class="mb-8 border border-hazard/50 bg-hazard/10 rounded px-5 py-4 text-hazard text-sm font-mono tracking-wide">
+  &#x26A0; {{ error }}
+</div>
+{% endif %}
+
+{% if not error %}
+<!-- Stats -->
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
+  <div class="bg-nebula border border-white/10 rounded p-5">
+    <div class="text-dim text-xs tracking-widest mb-1">TOTALE</div>
+    <div class="font-display text-4xl text-white">{{ total_count }}</div>
+  </div>
+  <div class="bg-nebula border border-hazard/30 rounded p-5">
+    <div class="text-dim text-xs tracking-widest mb-1">PERICOLOSI</div>
+    <div class="font-display text-4xl text-hazard">{{ hazardous_count }}</div>
+  </div>
+  <div class="bg-nebula border border-white/10 rounded p-5">
+    <div class="text-dim text-xs tracking-widest mb-1">SICURI</div>
+    <div class="font-display text-4xl text-pulse">{{ total_count|add:"-"|add:hazardous_count }}</div>
+  </div>
+  <div class="bg-nebula border border-white/10 rounded p-5">
+    <div class="text-dim text-xs tracking-widest mb-1">RANGE</div>
+    <div class="font-display text-4xl text-white">7<span class="text-dim text-2xl">GG</span></div>
+  </div>
+</div>
+
+{% if asteroids %}
+<!-- Chart -->
+<div class="bg-nebula border border-white/10 rounded mb-10 p-6">
+  <div class="text-xs text-dim tracking-widest mb-6">CONFRONTO DIAMETRO (metri)</div>
+  <div class="relative" style="height: 280px;">
+    <canvas id="diameterChart"></canvas>
+  </div>
+</div>
+
+<!-- Table -->
+<div class="bg-nebula border border-white/10 rounded overflow-hidden">
+  <div class="px-6 py-4 border-b border-white/10 text-xs text-dim tracking-widest">
+    LISTA ASTEROIDI
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm font-mono">
+      <thead>
+        <tr class="border-b border-white/5">
+          <th class="text-left px-6 py-3 text-dim text-xs tracking-widest">NOME</th>
+          <th class="text-left px-6 py-3 text-dim text-xs tracking-widest">DATA</th>
+          <th class="text-right px-6 py-3 text-dim text-xs tracking-widest">DIAMETRO (m)</th>
+          <th class="text-right px-6 py-3 text-dim text-xs tracking-widest">VELOCITÀ (km/h)</th>
+          <th class="text-right px-6 py-3 text-dim text-xs tracking-widest">DISTANZA (km)</th>
+          <th class="text-center px-6 py-3 text-dim text-xs tracking-widest">PERICOLO</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for asteroid in asteroids %}
+        <tr class="border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer"
+            onclick="window.location='{% url 'core:asteroid_detail' asteroid.nasa_id %}'">
+          <td class="px-6 py-4">
+            <span class="text-white">{{ asteroid.name }}</span>
+            <span class="text-dim text-xs ml-2">#{{ asteroid.nasa_id }}</span>
+          </td>
+          <td class="px-6 py-4 text-dim">{{ asteroid.close_approach_date }}</td>
+          <td class="px-6 py-4 text-right text-white">
+            {{ asteroid.diameter_avg_m|floatformat:0 }}
+          </td>
+          <td class="px-6 py-4 text-right text-white">
+            {{ asteroid.velocity_kmh|floatformat:0 }}
+          </td>
+          <td class="px-6 py-4 text-right text-white">
+            {{ asteroid.miss_distance_km|floatformat:0 }}
+          </td>
+          <td class="px-6 py-4 text-center">
+            {% if asteroid.is_potentially_hazardous %}
+              <span class="inline-block px-2 py-1 text-xs bg-hazard/20 text-hazard border border-hazard/40 rounded tracking-widest">
+                PHO
+              </span>
+            {% else %}
+              <span class="inline-block px-2 py-1 text-xs bg-pulse/10 text-pulse border border-pulse/30 rounded tracking-widest">
+                SAFE
+              </span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+(function () {
+  const labels = {{ chart_labels|safe }};
+  const diameters = {{ chart_diameters|safe }};
+  const hazardous = {{ chart_hazardous|safe }};
+
+  const colors = hazardous.map(h => h ? 'rgba(255,51,102,0.8)' : 'rgba(0,255,136,0.7)');
+  const borders = hazardous.map(h => h ? '#ff3366' : '#00ff88');
+
+  const ctx = document.getElementById('diameterChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Diametro medio (m)',
+        data: diameters,
+        backgroundColor: colors,
+        borderColor: borders,
+        borderWidth: 1,
+        borderRadius: 3,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#12121e',
+          borderColor: 'rgba(255,255,255,0.1)',
+          borderWidth: 1,
+          titleColor: '#8888aa',
+          bodyColor: '#ffffff',
+          titleFont: { family: 'Space Mono', size: 10 },
+          bodyFont: { family: 'Space Mono', size: 12 },
+          callbacks: {
+            label: ctx => `${ctx.parsed.y.toFixed(0)} m`,
+            afterLabel: (ctx) => hazardous[ctx.dataIndex] ? '⚠ Potenzialmente pericoloso' : '✓ Sicuro',
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: {
+            color: '#8888aa',
+            font: { family: 'Space Mono', size: 9 },
+            maxRotation: 45,
+          },
+          grid: { color: 'rgba(255,255,255,0.05)' },
+        },
+        y: {
+          ticks: {
+            color: '#8888aa',
+            font: { family: 'Space Mono', size: 10 },
+            callback: v => v + ' m',
+          },
+          grid: { color: 'rgba(255,255,255,0.05)' },
+        }
+      }
+    }
+  });
+})();
+</script>
+
+{% else %}
+<div class="text-center py-24 text-dim">
+  <div class="font-display text-5xl text-white/10 mb-4">NO DATA</div>
+  <p class="text-sm tracking-widest">Nessun asteroide trovato nel range selezionato.</p>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

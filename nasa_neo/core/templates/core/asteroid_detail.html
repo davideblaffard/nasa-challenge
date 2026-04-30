@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}{{ asteroid.name }} — NASA NEO Monitor{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+  <a href="{% url 'core:dashboard' %}" class="text-dim text-xs tracking-widest hover:text-pulse transition-colors">
+    &larr; TORNA ALLA DASHBOARD
+  </a>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <!-- Main info -->
+  <div class="lg:col-span-2">
+    <div class="bg-nebula border {% if asteroid.is_potentially_hazardous %}border-hazard/40 glow-hazard{% else %}border-white/10{% endif %} rounded p-8 mb-6">
+      <div class="flex items-start justify-between mb-6">
+        <div>
+          <div class="text-dim text-xs tracking-widest mb-2">IDENTIFICATIVO #{{ asteroid.nasa_id }}</div>
+          <h1 class="font-display text-4xl sm:text-5xl text-white leading-none">{{ asteroid.name }}</h1>
+        </div>
+        {% if asteroid.is_potentially_hazardous %}
+        <div class="border border-hazard/60 bg-hazard/15 rounded px-4 py-2 text-hazard text-xs font-mono tracking-widest animate-pulse-slow">
+          &#x26A0; PHO
+        </div>
+        {% else %}
+        <div class="border border-pulse/40 bg-pulse/10 rounded px-4 py-2 text-pulse text-xs font-mono tracking-widest">
+          &#x2713; SICURO
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <div class="bg-void/60 rounded p-4">
+          <div class="text-dim text-xs tracking-widest mb-1">DATA APPROCCIO</div>
+          <div class="text-white font-mono text-sm">{{ asteroid.close_approach_date }}</div>
+        </div>
+        <div class="bg-void/60 rounded p-4">
+          <div class="text-dim text-xs tracking-widest mb-1">MAGNITUDINE</div>
+          <div class="text-white font-mono text-sm">
+            {{ asteroid.absolute_magnitude|floatformat:1|default:"N/D" }}
+          </div>
+        </div>
+        <div class="bg-void/60 rounded p-4">
+          <div class="text-dim text-xs tracking-widest mb-1">ULTIMO FETCH</div>
+          <div class="text-white font-mono text-xs">{{ asteroid.fetched_at|date:"d/m/Y H:i" }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Diameter visual -->
+    <div class="bg-nebula border border-white/10 rounded p-8 mb-6">
+      <div class="text-dim text-xs tracking-widest mb-6">STIMA DIAMETRO</div>
+      <div class="flex items-end gap-6">
+        <div class="text-center">
+          <div class="font-display text-5xl {% if asteroid.is_potentially_hazardous %}text-hazard{% else %}text-pulse{% endif %}">
+            {{ asteroid.diameter_avg_m|floatformat:0 }}
+          </div>
+          <div class="text-dim text-xs mt-1 tracking-widest">MEDIA (m)</div>
+        </div>
+        <div class="flex-1">
+          <!-- Diameter range bar -->
+          <div class="relative h-8 bg-void/80 rounded-full overflow-hidden border border-white/10">
+            <div class="absolute inset-y-0 left-0 {% if asteroid.is_potentially_hazardous %}bg-hazard/70{% else %}bg-pulse/70{% endif %} rounded-full"
+                 style="width: 100%"></div>
+          </div>
+          <div class="flex justify-between text-xs text-dim mt-2">
+            <span>MIN: {{ asteroid.diameter_min_km|floatformat:4 }} km</span>
+            <span>MAX: {{ asteroid.diameter_max_km|floatformat:4 }} km</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sidebar stats -->
+  <div class="space-y-4">
+    <div class="bg-nebula border border-white/10 rounded p-6">
+      <div class="text-dim text-xs tracking-widest mb-4">VELOCITÀ RELATIVA</div>
+      <div class="font-display text-4xl text-white">{{ asteroid.velocity_kmh|floatformat:0 }}</div>
+      <div class="text-dim text-xs mt-1">km/h</div>
+      <div class="text-dim text-xs mt-1">≈ {{ asteroid.velocity_kmh|floatformat:2 }} km/h</div>
+    </div>
+
+    <div class="bg-nebula border border-white/10 rounded p-6">
+      <div class="text-dim text-xs tracking-widest mb-4">DISTANZA DI MANCATO IMPATTO</div>
+      <div class="font-display text-3xl text-white">{{ asteroid.miss_distance_km|floatformat:0 }}</div>
+      <div class="text-dim text-xs mt-1">chilometri</div>
+    </div>
+
+    {% if asteroid.nasa_url %}
+    <a href="{{ asteroid.nasa_url }}" target="_blank" rel="noopener noreferrer"
+       class="block bg-nebula border border-pulse/30 rounded p-5 text-center hover:border-pulse/60 hover:glow-pulse transition-all group">
+      <div class="text-pulse text-xs tracking-widest mb-1 group-hover:text-white transition-colors">
+        &#x2197; NASA JPL
+      </div>
+      <div class="text-dim text-xs">Scheda tecnica completa</div>
+    </a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
