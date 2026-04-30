@@ -17,6 +17,37 @@ function isoDaysAgo(n) {
   return d.toISOString().split('T')[0]
 }
 
+const STATS = [
+  {
+    key: 'total',
+    label: 'TOTAL',
+    color: 'text-silver',
+    border: 'px-border-dim',
+    tip: 'Asteroidi con close approach nel range selezionato.',
+  },
+  {
+    key: 'hazardous',
+    label: 'DANGER',
+    color: 'text-hazard',
+    border: 'px-border-red',
+    tip: 'PHO: diametro >140m, miss distance <0.05 AU.',
+  },
+  {
+    key: 'safe',
+    label: 'SAFE',
+    color: 'text-pulse',
+    border: 'px-border-green',
+    tip: 'Non classificati PHO da NASA.',
+  },
+  {
+    key: 'shown',
+    label: 'SHOWN',
+    color: 'text-cyan',
+    border: 'px-border-cyan',
+    tip: 'Visibili dopo i filtri attivi.',
+  },
+]
+
 export default function Dashboard() {
   const [startDate, setStartDate] = useState(isoDaysAgo(6))
   const [endDate, setEndDate] = useState(isoToday())
@@ -49,41 +80,55 @@ export default function Dashboard() {
   const total = data?.length ?? 0
   const hazardousCount = data?.filter(a => a.is_potentially_hazardous).length ?? 0
 
+  const statValues = {
+    total: total,
+    hazardous: hazardousCount,
+    safe: total - hazardousCount,
+    shown: filtered.length,
+  }
+
   return (
     <div>
-      <div className="mb-10">
-        <h1 className="font-display text-6xl sm:text-8xl text-white tracking-widest leading-none">
-          NEAR EARTH<br />
-          <span className="text-pulse">OBJECTS</span>
+      {/* Title */}
+      <div className="mb-10 pt-4">
+        <h1 className="text-pulse text-xl sm:text-2xl leading-loose tracking-widest cursor">
+          NEAR EARTH
         </h1>
-        <p className="text-dim text-sm mt-3 tracking-widest">MONITORAGGIO ASTEROIDI IN TEMPO REALE</p>
+        <h1 className="text-silver text-xl sm:text-2xl leading-loose tracking-widest mb-4">
+          OBJECTS
+        </h1>
+        <div className="text-dim text-[8px] leading-6">ASTEROID MONITORING SYSTEM v2.0</div>
       </div>
 
+      {/* Date picker */}
       <form onSubmit={handleSearch} className="mb-10">
-        <div className="flex flex-wrap gap-4 items-end">
+        <div className="text-[8px] text-dim mb-4 leading-6">▶ SELECT DATE RANGE</div>
+        <div className="flex flex-wrap gap-6 items-end">
           <div>
-            <label className="block text-xs text-dim tracking-widest mb-2">DATA INIZIO</label>
+            <div className="text-[8px] text-cyan mb-2">FROM</div>
             <input
               type="date"
               value={pendingStart}
               onChange={e => setPendingStart(e.target.value)}
-              className="bg-nebula border border-white/10 text-white text-sm font-mono px-4 py-2 rounded focus:outline-none focus:border-pulse/60 focus:ring-1 focus:ring-pulse/30 transition-all"
+              className="bg-cosmos px-border px-border-cyan text-silver text-[8px] px-3 py-2 outline-none w-40"
+              style={{ colorScheme: 'dark' }}
             />
           </div>
           <div>
-            <label className="block text-xs text-dim tracking-widest mb-2">DATA FINE</label>
+            <div className="text-[8px] text-cyan mb-2">TO</div>
             <input
               type="date"
               value={pendingEnd}
               onChange={e => setPendingEnd(e.target.value)}
-              className="bg-nebula border border-white/10 text-white text-sm font-mono px-4 py-2 rounded focus:outline-none focus:border-pulse/60 focus:ring-1 focus:ring-pulse/30 transition-all"
+              className="bg-cosmos px-border px-border-cyan text-silver text-[8px] px-3 py-2 outline-none w-40"
+              style={{ colorScheme: 'dark' }}
             />
           </div>
           <button
             type="submit"
-            className="bg-pulse text-void font-mono text-sm font-bold px-6 py-2 rounded tracking-widest hover:bg-pulse/80 transition-all glow-pulse"
+            className="px-btn px-border-green text-pulse bg-void text-[8px] px-5 py-2"
           >
-            CERCA
+            ▶ SCAN
           </button>
         </div>
       </form>
@@ -92,49 +137,26 @@ export default function Dashboard() {
 
       {!isError && (
         <>
+          {/* Stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
-            {[
-              {
-                label: 'TOTALE',
-                value: total,
-                color: 'text-white',
-                border: 'border-white/10',
-                tip: 'Numero di asteroidi con close approach nel range di date selezionato.',
-              },
-              {
-                label: 'PERICOLOSI',
-                value: hazardousCount,
-                color: 'text-hazard',
-                border: 'border-hazard/30',
-                tip: 'PHO (Potentially Hazardous Objects): diametro stimato >140m e miss distance <0.05 AU dalla Terra.',
-              },
-              {
-                label: 'SICURI',
-                value: total - hazardousCount,
-                color: 'text-pulse',
-                border: 'border-white/10',
-                tip: 'Asteroidi non classificati come PHO da NASA. Possono comunque avvicinarsi notevolmente.',
-              },
-              {
-                label: 'MOSTRATI',
-                value: filtered.length,
-                color: 'text-white',
-                border: 'border-white/10',
-                tip: 'Asteroidi visibili dopo aver applicato i filtri attivi (tutti / PHO / sicuri).',
-              },
-            ].map(({ label, value, color, border, tip }) => (
-              <div key={label} className={`bg-nebula border ${border} rounded p-5`}>
-                <Tooltip content={tip} position="bottom">
-                  <div className="text-dim text-xs tracking-widest mb-1 border-b border-dotted border-dim/40 pb-px cursor-help inline-block">
-                    {label}
+            {STATS.map(s => (
+              <div key={s.key} className={`px-border ${s.border} bg-cosmos p-4`}>
+                <Tooltip content={s.tip} position="bottom">
+                  <div className={`text-[8px] text-dim mb-3 border-b border-dotted border-dim/40 pb-1 cursor-help leading-5`}>
+                    {s.label}
                   </div>
                 </Tooltip>
-                <div className={`font-display text-4xl ${color}`}>{isLoading ? '—' : value}</div>
+                <div className={`text-2xl ${s.color} leading-none mt-2`}>
+                  {isLoading ? '??' : statValues[s.key]}
+                </div>
               </div>
             ))}
           </div>
 
+          {/* Charts */}
           <Charts data={data} isLoading={isLoading} />
+
+          {/* Table */}
           <FilterBar filter={filter} setFilter={setFilter} sortBy={sortBy} setSortBy={setSortBy} />
           <AsteroidTable asteroids={filtered} isLoading={isLoading} />
         </>

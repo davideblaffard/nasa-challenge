@@ -2,44 +2,86 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: 'Space Mono', monospace;
-  background-color: #050508;
+* {
+  image-rendering: pixelated;
+  -webkit-font-smoothing: none;
+  font-smoothing: never;
 }
 
+body {
+  font-family: 'Press Start 2P', monospace;
+  background-color: #050508;
+  color: #c0c0d0;
+}
+
+/* ── Pixel grid background ─────────────────────────────────────── */
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(0,255,65,0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,255,65,0.07) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+/* ── CRT scanline overlay ──────────────────────────────────────── */
 .scanline {
   background: repeating-linear-gradient(
     0deg,
     transparent,
     transparent 2px,
-    rgba(0, 255, 136, 0.015) 2px,
-    rgba(0, 255, 136, 0.015) 4px
+    rgba(0, 0, 0, 0.15) 2px,
+    rgba(0, 0, 0, 0.15) 4px
   );
   pointer-events: none;
 }
 
-.glow-pulse {
-  box-shadow: 0 0 20px rgba(0, 255, 136, 0.3), 0 0 60px rgba(0, 255, 136, 0.1);
-}
+/* ── Pixel borders (2px solid + offset drop shadow) ───────────── */
+.px-border         { border: 2px solid; }
+.px-border-green   { border-color: #00ff41; box-shadow:  3px 3px 0 #00ff41; }
+.px-border-red     { border-color: #ff2a6d; box-shadow:  3px 3px 0 #ff2a6d; }
+.px-border-cyan    { border-color: #05d9e8; box-shadow:  3px 3px 0 #05d9e8; }
+.px-border-amber   { border-color: #ffd700; box-shadow:  3px 3px 0 #ffd700; }
+.px-border-purple  { border-color: #b14cf8; box-shadow:  3px 3px 0 #b14cf8; }
+.px-border-orange  { border-color: #ff6b35; box-shadow:  3px 3px 0 #ff6b35; }
+.px-border-dim     { border-color: #444466; box-shadow:  3px 3px 0 #444466; }
 
-.glow-hazard {
-  box-shadow: 0 0 20px rgba(255, 51, 102, 0.4), 0 0 60px rgba(255, 51, 102, 0.15);
+/* ── Pixel button ──────────────────────────────────────────────── */
+.px-btn {
+  border: 2px solid;
+  box-shadow: 3px 3px 0;
+  transition: none;
+  cursor: pointer;
+  user-select: none;
 }
+.px-btn:hover  { filter: brightness(1.2); }
+.px-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0; }
 
-.grid-bg {
-  background-image:
-    linear-gradient(rgba(0, 255, 136, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 255, 136, 0.04) 1px, transparent 1px);
-  background-size: 40px 40px;
+/* ── Pixel filter pill ─────────────────────────────────────────── */
+.px-pill {
+  border: 2px solid #444466;
+  box-shadow: 2px 2px 0 #444466;
+  transition: none;
+  cursor: pointer;
 }
+.px-pill:hover  { border-color: #c0c0d0; box-shadow: 2px 2px 0 #c0c0d0; }
+.px-pill.active { border-color: #00ff41; box-shadow: 2px 2px 0 #00ff41; color: #00ff41; }
 
+/* ── Skeleton shimmer ──────────────────────────────────────────── */
 .skeleton {
   background: linear-gradient(90deg, #12121e 25%, #1e1e30 50%, #12121e 75%);
   background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
+  animation: shimmer 1.5s steps(4) infinite;
+}
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+/* ── Pixel cursor blink ────────────────────────────────────────── */
+.cursor::after {
+  content: '_';
+  animation: pixel-blink 1s steps(1) infinite;
+}
+@keyframes pixel-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
 }
