@@ -12,8 +12,8 @@ export default function Tooltip({ content, children, position = 'top' }) {
     <span className="relative group inline-flex">
       {children}
       <span
-        className={`absolute ${posClasses[position]} z-50 px-3 py-2 bg-cosmos px-border px-border-dim text-[8px] text-silver whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none leading-5 max-w-[220px] whitespace-normal`}
-        style={{ transition: 'opacity 0.1s steps(1)' }}
+        className={`absolute ${posClasses[position]} z-50 px-3 py-2 bg-cosmos px-border px-border-dim text-[8px] text-silver opacity-0 group-hover:opacity-100 pointer-events-none leading-5`}
+        style={{ transition: 'opacity 0.1s steps(1)', width: 'max-content', maxWidth: '220px', whiteSpace: 'normal', wordBreak: 'break-word' }}
       >
         {content}
       </span>
