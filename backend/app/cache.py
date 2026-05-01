@@ -13,7 +13,11 @@ logger = logging.getLogger(__name__)
 NEO_CACHE_TTL_DAYS = 7
 
 
-def get_feed(start_date: date, end_date: date, db: Session) -> list[Asteroid]:
+def get_feed(start_date: date, end_date: date, db: Session) -> tuple[list[Asteroid], bool]:
+    """
+    Returns (asteroids, partial).
+    partial=True means a 429 interrupted fetching — results cover only cached dates.
+    """
     existing_dates = {
         row[0]
         for row in db.query(Asteroid.close_approach_date)
@@ -28,48 +32,55 @@ def get_feed(start_date: date, end_date: date, db: Session) -> list[Asteroid]:
     }
     missing = all_dates - existing_dates
 
+    partial = False
+
     if missing:
         client = get_nasa_client()
         missing_min, missing_max = min(missing), max(missing)
+        pending_rows: list[dict] = []
 
         for chunk_start, chunk_end in split_range(missing_min, missing_max):
             try:
                 data = client.fetch_feed(chunk_start, chunk_end)
-            except NASAAPIError:
-                raise  # propagate 429 / 5xx to the endpoint
+            except NASAAPIError as e:
+                if e.status_code == 429:
+                    partial = True
+                    break  # commit what we have, return partial results
+                raise
             except Exception as e:
                 logger.error("NASA fetch error for %s–%s: %s", chunk_start, chunk_end, e)
                 continue
 
-            rows = []
             for date_str, neos in data.get("near_earth_objects", {}).items():
                 for neo in neos:
                     try:
-                        rows.append(parse_neo(neo, date_str))
+                        pending_rows.append(parse_neo(neo, date_str))
                     except (KeyError, StopIteration) as e:
                         logger.warning("Skip NEO %s: %s", neo.get("id"), e)
 
-            if rows:
-                stmt = pg_insert(Asteroid).values(rows)
-                update_cols = {
-                    c.name: stmt.excluded[c.name]
-                    for c in Asteroid.__table__.columns
-                    if c.name not in ("nasa_id", "fetched_at")
-                }
-                update_cols["fetched_at"] = func.now()
-                stmt = stmt.on_conflict_do_update(
-                    index_elements=["nasa_id"],
-                    set_=update_cols,
-                )
-                db.execute(stmt)
-                db.commit()
+        # Single commit after all chunks (or after 429 break)
+        if pending_rows:
+            stmt = pg_insert(Asteroid).values(pending_rows)
+            update_cols = {
+                c.name: stmt.excluded[c.name]
+                for c in Asteroid.__table__.columns
+                if c.name not in ("nasa_id", "fetched_at")
+            }
+            update_cols["fetched_at"] = func.now()
+            stmt = stmt.on_conflict_do_update(
+                index_elements=["nasa_id"],
+                set_=update_cols,
+            )
+            db.execute(stmt)
+            db.commit()
 
-    return (
+    asteroids = (
         db.query(Asteroid)
         .filter(Asteroid.close_approach_date.between(start_date, end_date))
         .order_by(Asteroid.close_approach_date, Asteroid.name)
         .all()
     )
+    return asteroids, partial
 
 
 def get_neo_detail(nasa_id: str, db: Session) -> dict | None:

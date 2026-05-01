@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from datetime import date
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from decouple import config
@@ -12,6 +12,7 @@ from .nasa import NASAAPIError
 from .schemas import AsteroidOut, NeoDetail
 
 ALLOWED_ORIGIN = config("ALLOWED_ORIGIN", default="*")
+MAX_RANGE_DAYS = 7
 
 
 @asynccontextmanager
@@ -27,6 +28,7 @@ app.add_middleware(
     allow_origins=[ALLOWED_ORIGIN],
     allow_methods=["GET"],
     allow_headers=["*"],
+    expose_headers=["X-Partial-Results"],
 )
 
 
@@ -34,14 +36,18 @@ app.add_middleware(
 def feed(
     start_date: date = Query(...),
     end_date: date = Query(...),
+    response: Response = None,
     db: Session = Depends(get_db),
 ):
     if start_date > end_date:
         raise HTTPException(400, "start_date deve precedere end_date")
-    if (end_date - start_date).days > 365:
-        raise HTTPException(400, "Range massimo: 365 giorni")
+    if (end_date - start_date).days >= MAX_RANGE_DAYS:
+        raise HTTPException(400, f"Range massimo: {MAX_RANGE_DAYS} giorni")
     try:
-        return get_feed(start_date, end_date, db)
+        asteroids, partial = get_feed(start_date, end_date, db)
+        if partial:
+            response.headers["X-Partial-Results"] = "true"
+        return asteroids
     except NASAAPIError as e:
         raise HTTPException(e.status_code, str(e))
 

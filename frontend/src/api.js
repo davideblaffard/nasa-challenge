@@ -9,11 +9,17 @@ async function apiFetch(path) {
     const err = await res.json().catch(() => ({}))
     throw new Error(err.detail || `Errore server (${res.status})`)
   }
-  return res.json()
+  const data = await res.json()
+  const partial = res.headers.get('X-Partial-Results') === 'true'
+  return { data, partial }
 }
 
-export const fetchFeed = (startDate, endDate) =>
-  apiFetch(`/api/feed?start_date=${startDate}&end_date=${endDate}`)
+export async function fetchFeed(startDate, endDate) {
+  const { data, partial } = await apiFetch(`/api/feed?start_date=${startDate}&end_date=${endDate}`)
+  return { asteroids: data, partial }
+}
 
-export const fetchNeo = (nasaId) =>
-  apiFetch(`/api/neo/${nasaId}`)
+export async function fetchNeo(nasaId) {
+  const { data } = await apiFetch(`/api/neo/${nasaId}`)
+  return data
+}
