@@ -1,0 +1,8 @@
+backend/
+compose/
+nasa_neo/
+manage.py
+requirements.txt
+docker-compose*.yml
+deploy.sh
+CLAUDE.md
